@@ -1,0 +1,17 @@
+{
+  "name": "near-money-saver",
+  "version": "0.0.1",
+  "description": "TBC",
+  "scripts": {
+    "dev": "watch -d -n 1 'clear && yarn test'",
+    "test": "yarn asp -f unit.spec",
+    "clean": "rm -rf ./build && rm -rf ./neardev",
+    "build": "asb --target debug",
+    "build:release": "asb",
+    "asp": "asp --verbose --nologo"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "near-sdk-as": "^3.1.0"
+  }
+}
