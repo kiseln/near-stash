@@ -5,7 +5,7 @@ let contract: Contract;
 
 beforeEach(() => {
     VMContext.setSigner_account_id("user1");
-    contract = new Contract("test_owner");
+    contract = new Contract();
 });
 
 describe("Contract deposit", () => {
@@ -15,7 +15,7 @@ describe("Contract deposit", () => {
     });
 
     it("should not allow deposits less than defined minimum", () => {
-        contract = new Contract("test_owner", new u128(10));
+        contract = new Contract(new u128(10));
         VMContext.setAttached_deposit(new u128(4));
         expect(() => { contract.deposit(); }).toThrow();
     });
@@ -29,5 +29,27 @@ describe("Contract deposit", () => {
         VMContext.setAttached_deposit(new u128(4));
         contract.deposit();
         expect(() => { contract.deposit(); }).toThrow();
+    });
+})
+
+describe("Contract withdraw", () => {
+    beforeEach(() => {
+        VMContext.setSigner_account_id("user1");
+        VMContext.setAttached_deposit(new u128(4));
+        contract.deposit();
+    });
+
+    it("should fail if there is no deposit found", () => {
+        VMContext.setSigner_account_id("user2");
+        expect(() => { contract.withdraw(); }).toThrow();
+    });
+
+    it("should make a transfer back to sender", () => {
+        contract.withdraw();
+    });
+
+    it("should delete the deposit in case of success", () => {
+        contract.withdraw();
+        expect(() => { contract.withdraw(); }).toThrow();
     });
 })
