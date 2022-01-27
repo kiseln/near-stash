@@ -1,22 +1,26 @@
-import { storage, Context, u128, PersistentMap, ContractPromiseBatch, ContractPromise } from "near-sdk-core"
-import { AccountId, assert_self, assert_single_promise_success, XCC_GAS } from "../../utils"
+import { Context, u128, PersistentMap, ContractPromiseBatch, ContractPromise } from "near-sdk-core"
+import { AccountId, assert_self, readableTimespan, minutesToTimestamp, XCC_GAS } from "../../utils"
+import { Deposit } from "./deposit";
 
 @nearBindgen
 export class Contract {
     private minDeposit: u128;
-    private deposits: PersistentMap<string, u128> = new PersistentMap<string, u128>("deposit");
+    private deposits: PersistentMap<AccountId, Deposit> = new PersistentMap<AccountId, Deposit>("deposit");
 
     constructor(minDeposit: u128 = u128.One) {
         this.minDeposit = minDeposit;
     };
 
     @mutateState()
-    deposit(): void {
-        const deposit = Context.attachedDeposit;
-        assert(deposit >= this.minDeposit, `Deposit should be at least ${this.minDeposit} yNear`);
+    deposit(lockPeriodInMinutes: u64 = 0): void {
+        const amount = Context.attachedDeposit;
+        
+        assert(amount >= this.minDeposit, `Deposit should be at least ${this.minDeposit} yNear`);
         assert(!this.deposits.contains(Context.sender), "You already have a deposit");
 
-        this.deposits.set(Context.sender, deposit);
+        let endTimestamp = Context.blockTimestamp + minutesToTimestamp(lockPeriodInMinutes);
+        
+        this.deposits.set(Context.sender, new Deposit(amount, endTimestamp));
     }
 
     @mutateState()
@@ -24,22 +28,20 @@ export class Contract {
         const sender = Context.sender;
         assert(this.deposits.contains(sender), "You don't have a deposit");
 
-        let deposit = this.deposits.get(sender);
-        if (deposit === null) {
-            assert(false, "Unexpected error occured");
-            return;            
-        };
+        let deposit = this.deposits.getSome(sender);
+        assert(deposit.endTimestamp <= Context.blockTimestamp,
+            `You will be able to withdraw your deposit in ${readableTimespan(deposit.endTimestamp - Context.blockTimestamp)}`);
 
         this.deposits.delete(sender);
 
         ContractPromiseBatch.create(sender)
-            .transfer(deposit)
+            .transfer(deposit.amount)
                 .then(Context.contractName)
                 .function_call("on_withdraw_complete", new OnWithdrawCompleteArgs(deposit), u128.Zero, XCC_GAS);
     }
 
     @mutateState()
-    on_withdraw_complete(deposit: u128): void {
+    on_withdraw_complete(deposit: Deposit): void {
         assert_self();
 
         const results = ContractPromise.getResults()
@@ -53,5 +55,5 @@ export class Contract {
 
 @nearBindgen
 class OnWithdrawCompleteArgs {
-    constructor(public deposit: u128) {}
+    constructor(public deposit: Deposit) {}
 }

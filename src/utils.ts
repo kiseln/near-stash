@@ -90,3 +90,21 @@ export function assert_single_promise_success(): void {
   assert(x.length == 1, "Expected exactly one promise result")
   assert(x[0].succeeded, "Expected PromiseStatus to be successful")
 }
+
+export function minutesToTimestamp(minutes: u64): Timestamp {
+  return minutes * 60 * 1000_000_000;
+}
+
+export function readableTimespan(timestamp: u64): string {
+  let seconds = timestamp / 1000000000;
+  let minutes = seconds / 60;
+  let hours = minutes / 60;
+  let days = hours / 24;
+
+  let secondsStr = `${seconds % 60} Seconds`,
+      minutesStr = minutes == 0 ? "" : `${minutes % 60} Minutes, `,
+      hoursStr = hours == 0 ? "" : `${hours % 24} Hours, `,
+      daysStr = days == 0 ? "" : `${days} Days, `;
+
+  return daysStr + hoursStr + minutesStr + secondsStr;
+}

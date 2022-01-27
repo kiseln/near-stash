@@ -30,7 +30,7 @@ describe("Contract deposit", () => {
         contract.deposit();
         expect(() => { contract.deposit(); }).toThrow();
     });
-})
+});
 
 describe("Contract withdraw", () => {
     beforeEach(() => {
@@ -44,12 +44,30 @@ describe("Contract withdraw", () => {
         expect(() => { contract.withdraw(); }).toThrow();
     });
 
-    it("should make a transfer back to sender", () => {
+    it("should withdraw if deposit exists", () => {
         contract.withdraw();
     });
 
-    it("should delete the deposit in case of success", () => {
+    it("should delete the deposit after withdrawing", () => {
         contract.withdraw();
         expect(() => { contract.withdraw(); }).toThrow();
     });
-})
+});
+
+describe("Contract withdraw", () => {
+    beforeEach(() => {
+        VMContext.setAttached_deposit(new u128(4));
+        VMContext.setBlock_timestamp(1643297131_000_000_000);
+        contract.deposit(10);
+    });
+
+    it("should allow withdraw if required time has passed", () => {
+        VMContext.setBlock_timestamp(1643297843_000_000_000)
+        expect(() => { contract.withdraw(); }).not.toThrow();
+    });
+
+    it("should not allow withdraw if required time hasn't passed", () => {
+        VMContext.setBlock_timestamp(1643297283_000_000_000)
+        expect(() => { contract.withdraw(); }).toThrow();
+    });
+});
